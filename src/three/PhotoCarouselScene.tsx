@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Image } from '@react-three/drei';
 import * as THREE from 'three';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -27,6 +27,7 @@ function CarouselItem({
 }: CarouselItemProps) {
   const meshRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
+  const tapStartRef = useRef({ x: 0, y: 0, time: 0 });
 
   const angle = (index / total) * Math.PI * 2;
   const x = Math.sin(angle) * radius;
@@ -38,6 +39,7 @@ function CarouselItem({
       position={[x, 0, z]}
       rotation={[0, angle, 0]}
       scale={hovered ? 1.07 : 1}
+      userData={{ photoIndex: index }}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(true);
@@ -48,20 +50,44 @@ function CarouselItem({
         if (typeof document !== 'undefined') document.body.style.cursor = 'auto';
       }}
     >
+      {/* 3D Image Card */}
       <Image
         url={url}
         scale={[cardWidth, cardHeight]}
         radius={0.08}
         transparent
         toneMapped={false}
+        userData={{ photoIndex: index }}
+      />
+
+      {/* Invisible Interactive Hit-Test Plane for 100% Reliable Click/Tap */}
+      <mesh
+        position={[0, 0, 0.02]}
+        userData={{ photoIndex: index }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          tapStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+        }}
+        onPointerUp={(e) => {
+          e.stopPropagation();
+          const dx = Math.abs(e.clientX - tapStartRef.current.x);
+          const dy = Math.abs(e.clientY - tapStartRef.current.y);
+          const dt = Date.now() - tapStartRef.current.time;
+          // Tap threshold: moved less than 18px and released under 450ms
+          if (dx < 18 && dy < 18 && dt < 450) {
+            onSelect(index);
+          }
+        }}
         onClick={(e) => {
           e.stopPropagation();
-          // Only trigger select if user was not actively dragging
           if (!hasMovedRef.current) {
             onSelect(index);
           }
         }}
-      />
+      >
+        <planeGeometry args={[cardWidth, cardHeight]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
@@ -88,6 +114,67 @@ function CarouselRig({
   onSelect: (index: number) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const { camera, raycaster, gl } = useThree();
+  const lastSelectTimeRef = useRef(0);
+
+  // Deduplicated selection callback
+  const safeSelect = useCallback(
+    (index: number) => {
+      const now = Date.now();
+      if (now - lastSelectTimeRef.current > 350) {
+        lastSelectTimeRef.current = now;
+        onSelect(index);
+      }
+    },
+    [onSelect]
+  );
+
+  // Direct Three.js Canvas Raycaster fallback: Guaranteed tap detection on mobile and desktop
+  useEffect(() => {
+    const dom = gl.domElement;
+    let downPos = { x: 0, y: 0, time: 0 };
+
+    const handleCanvasPointerDown = (e: PointerEvent) => {
+      downPos = { x: e.clientX, y: e.clientY, time: Date.now() };
+    };
+
+    const handleCanvasPointerUp = (e: PointerEvent) => {
+      const dx = Math.abs(e.clientX - downPos.x);
+      const dy = Math.abs(e.clientY - downPos.y);
+      const dt = Date.now() - downPos.time;
+
+      // Only trigger if pointer moved less than 16px (not dragging) and under 450ms
+      if (dx < 16 && dy < 16 && dt < 450 && groupRef.current) {
+        const rect = dom.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(groupRef.current.children, true);
+
+        for (const hit of intersects) {
+          let cur: THREE.Object3D | null = hit.object;
+          while (cur && cur !== groupRef.current) {
+            if (typeof cur.userData?.photoIndex === 'number') {
+              safeSelect(cur.userData.photoIndex);
+              return;
+            }
+            cur = cur.parent;
+          }
+        }
+      }
+    };
+
+    dom.addEventListener('pointerdown', handleCanvasPointerDown);
+    dom.addEventListener('pointerup', handleCanvasPointerUp);
+
+    return () => {
+      dom.removeEventListener('pointerdown', handleCanvasPointerDown);
+      dom.removeEventListener('pointerup', handleCanvasPointerUp);
+    };
+  }, [camera, raycaster, gl, safeSelect]);
 
   useFrame(() => {
     if (!groupRef.current) return;
@@ -113,7 +200,7 @@ function CarouselRig({
           cardWidth={cardWidth}
           cardHeight={cardHeight}
           hasMovedRef={hasMovedRef}
-          onSelect={onSelect}
+          onSelect={safeSelect}
         />
       ))}
     </group>
@@ -127,12 +214,10 @@ export const PhotoCarouselScene: React.FC<{
   const count = Math.max(photos.length, 1);
 
   // Dynamic geometry for N photos:
-  // Card size smoothly adapts with comfortable margins
   const cardWidth = Math.max(1.1, Math.min(1.6, 1.6 - (count > 6 ? (count - 6) * 0.025 : 0)));
   const cardHeight = cardWidth * 1.33;
 
   // Chord distance between adjacent items at radius R is: 2 * R * sin(PI / N)
-  // We want chord = cardWidth * 1.35 for pleasant spacing
   const minChord = cardWidth * 1.35;
   const sinAngle = Math.sin(Math.PI / Math.max(count, 3));
   const calculatedRadius = minChord / (2 * sinAngle);
@@ -149,37 +234,46 @@ export const PhotoCarouselScene: React.FC<{
   const startXRef = useRef(0);
   const lastXRef = useRef(0);
 
+  // Pointer event listeners on window to handle smooth global dragging without capturing or blocking canvas clicks
+  useEffect(() => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      const currentX = e.clientX;
+      const deltaX = currentX - lastXRef.current;
+      lastXRef.current = currentX;
+
+      if (Math.abs(currentX - startXRef.current) > 12) {
+        hasMovedRef.current = true;
+      }
+
+      const sensitivity = 0.0055;
+      rotationRef.current += deltaX * sensitivity;
+      velocityRef.current = deltaX * sensitivity;
+    };
+
+    const handleGlobalPointerUp = () => {
+      isDraggingRef.current = false;
+    };
+
+    window.addEventListener('pointermove', handleGlobalPointerMove);
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handleGlobalPointerMove);
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('pointercancel', handleGlobalPointerUp);
+    };
+  }, []);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Left click or touch only
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
     isDraggingRef.current = true;
     hasMovedRef.current = false;
     startXRef.current = e.clientX;
     lastXRef.current = e.clientX;
     velocityRef.current = 0;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    const currentX = e.clientX;
-    const deltaX = currentX - lastXRef.current;
-    lastXRef.current = currentX;
-
-    if (Math.abs(currentX - startXRef.current) > 5) {
-      hasMovedRef.current = true;
-    }
-
-    const sensitivity = 0.0055;
-    rotationRef.current += deltaX * sensitivity;
-    velocityRef.current = deltaX * sensitivity;
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    isDraggingRef.current = false;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
   };
 
   const handleSpinLeft = (e: React.MouseEvent) => {
@@ -196,9 +290,6 @@ export const PhotoCarouselScene: React.FC<{
     <div
       className="w-full h-[520px] sm:h-[620px] relative select-none cursor-grab active:cursor-grabbing touch-none py-2"
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
     >
       <Canvas
         camera={{ position: [0, 0, cameraZ], fov: 42 }}
@@ -235,7 +326,7 @@ export const PhotoCarouselScene: React.FC<{
         <div className="pointer-events-none text-xs text-rose-200/90 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-rose-500/25 shadow-lg flex items-center gap-1.5 whitespace-nowrap">
           <span>Drag to spin</span>
           <span className="text-rose-400 font-semibold">({photos.length} photos)</span>
-          <span>&bull; Tap to view</span>
+          <span>&bull; Tap photo to view</span>
         </div>
 
         <button

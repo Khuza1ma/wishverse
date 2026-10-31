@@ -25,6 +25,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 export function App() {
   const [hasEntered, setHasEntered] = useState(false);
+  const [lightboxPhotos, setLightboxPhotos] = useState<LightboxPhoto[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const storyRef = useRef<HTMLDivElement>(null);
 
@@ -101,30 +102,33 @@ export function App() {
     }
   };
 
-  // Prepare full list of photos for Lightbox
-  const allLightboxPhotos: LightboxPhoto[] = [
-    ...config.gallery.map((g) => ({
-      url: getPhotoUrl(g.photo),
-      caption: g.caption || '',
-      location: g.location,
-    })),
-    ...config.timeline.map((m) => ({
-      url: getPhotoUrl(m.photo),
-      caption: m.date
-        ? `${m.title} (${m.date})${m.text ? ` ${m.text}` : ''}`
-        : `${m.title}${m.text ? ` ${m.text}` : ''}`,
-      location: m.badge,
-    })),
-  ];
+  // Moments (Timeline) photos strictly isolated for the Moments lightbox
+  const timelineLightboxPhotos: LightboxPhoto[] = (config.timeline || []).map((m) => ({
+    url: getPhotoUrl(m.photo),
+    caption: m.date
+      ? `${m.title} (${m.date})${m.text ? ` — ${m.text}` : ''}`
+      : `${m.title}${m.text ? ` — ${m.text}` : ''}`,
+    location: m.badge,
+  }));
 
-  // Callback to open lightbox from timeline
+  // Memories (Gallery) photos strictly isolated for the Memories lightbox
+  const galleryLightboxPhotos: LightboxPhoto[] = (config.gallery || []).map((g) => ({
+    url: getPhotoUrl(g.photo),
+    caption: g.caption || '',
+    location: g.location,
+  }));
+
+  // Callback to open lightbox from timeline (Moments only)
   const handleSelectTimelinePhoto = (photoUrl: string) => {
-    const idx = allLightboxPhotos.findIndex((p) => p.url === photoUrl);
-    if (idx !== -1) {
-      setLightboxIndex(idx);
-    } else {
-      setLightboxIndex(0);
-    }
+    const idx = timelineLightboxPhotos.findIndex((p) => p.url === photoUrl);
+    setLightboxPhotos(timelineLightboxPhotos);
+    setLightboxIndex(idx !== -1 ? idx : 0);
+  };
+
+  // Callback to open lightbox from gallery (Memories only)
+  const handleOpenGalleryLightbox = (idx: number) => {
+    setLightboxPhotos(galleryLightboxPhotos);
+    setLightboxIndex(idx);
   };
 
   return (
@@ -162,7 +166,7 @@ export function App() {
 
           {/* Fullscreen Photo Lightbox Modal */}
           <Lightbox
-            photos={allLightboxPhotos}
+            photos={lightboxPhotos}
             currentIndex={lightboxIndex}
             onClose={() => setLightboxIndex(null)}
             onNavigate={(newIdx) => setLightboxIndex(newIdx)}
@@ -202,7 +206,7 @@ export function App() {
             {config.gallery && config.gallery.length > 0 && (
               <GallerySection
                 items={config.gallery}
-                onOpenLightbox={(idx) => setLightboxIndex(idx)}
+                onOpenLightbox={handleOpenGalleryLightbox}
                 primaryColor={config.theme.primary}
               />
             )}
