@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Music, Play, Pause } from 'lucide-react';
+import { Volume2, VolumeX, Music, Play, Pause, SkipForward } from 'lucide-react';
 
 interface MusicToggleProps {
   isPlaying: boolean;
@@ -10,6 +10,7 @@ interface MusicToggleProps {
   onTogglePlay: () => void;
   onToggleMute: () => void;
   onVolumeChange: (vol: number) => void;
+  onNextTrack?: () => void;
 }
 
 export const MusicToggle: React.FC<MusicToggleProps> = ({
@@ -21,6 +22,7 @@ export const MusicToggle: React.FC<MusicToggleProps> = ({
   onTogglePlay,
   onToggleMute,
   onVolumeChange,
+  onNextTrack,
 }) => {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
@@ -82,6 +84,18 @@ export const MusicToggle: React.FC<MusicToggleProps> = ({
             />
           ))}
         </div>
+
+        {/* Next Track Switcher Button */}
+        {onNextTrack && (
+          <button
+            onClick={onNextTrack}
+            className="p-1 text-rose-300 hover:text-white transition-all active:scale-90"
+            title="Switch tune"
+            aria-label="Switch to next instrumental tune"
+          >
+            <SkipForward className="w-3.5 h-3.5 fill-current" />
+          </button>
+        )}
 
         {/* Mute / Volume Button */}
         <button

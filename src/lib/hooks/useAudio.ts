@@ -7,6 +7,11 @@ export function useAudio(audioUrl: string | null) {
   const [volume, setVolumeState] = useState(0.6);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isPlayingRef = useRef(false);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Initialize Audio
   useEffect(() => {
@@ -14,7 +19,7 @@ export function useAudio(audioUrl: string | null) {
 
     const audio = new Audio(audioUrl);
     audio.loop = true;
-    audio.volume = volume;
+    audio.volume = isMuted ? 0 : volume;
     audio.preload = 'auto';
 
     audio.addEventListener('error', (e) => {
@@ -22,10 +27,23 @@ export function useAudio(audioUrl: string | null) {
       setError('Audio failed to load');
     });
 
-    audio.addEventListener('play', () => setIsPlaying(true));
-    audio.addEventListener('pause', () => setIsPlaying(false));
+    audio.addEventListener('play', () => {
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+    });
+    audio.addEventListener('pause', () => {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+    });
 
     audioRef.current = audio;
+
+    // If already playing when track changes, seamlessly continue playing the new track
+    if (isPlayingRef.current) {
+      audio.play().catch((err) => {
+        console.warn('Playback resume notice:', err);
+      });
+    }
 
     return () => {
       audio.pause();

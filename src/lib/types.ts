@@ -19,6 +19,12 @@ export interface FinalLetterConfig {
   closingPhoto?: string;
 }
 
+export interface MusicTrack {
+  file: string;
+  title: string;
+  artist?: string;
+}
+
 export interface SiteConfig {
   herName: string;
   yourName: string;
@@ -38,11 +44,8 @@ export interface SiteConfig {
   };
   heroMessage: string;
   heroSubtitle?: string;
-  music: {
-    file: string;
-    title: string;
-    artist?: string;
-  };
+  music: MusicTrack;
+  playlist?: MusicTrack[];
   togetherSince: string; // YYYY-MM-DD
   togetherCounterLabel?: string;
   timeline: Milestone[];
