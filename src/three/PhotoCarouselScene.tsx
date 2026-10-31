@@ -127,9 +127,9 @@ export const PhotoCarouselScene: React.FC<{
   const count = Math.max(photos.length, 1);
 
   // Dynamic geometry for N photos:
-  // Card size smoothly adapts so whether there are 3 or 30 photos they look crisp
-  const cardWidth = Math.max(1.15, Math.min(1.75, 1.75 - (count > 6 ? (count - 6) * 0.03 : 0)));
-  const cardHeight = cardWidth * 1.35;
+  // Card size smoothly adapts with comfortable margins
+  const cardWidth = Math.max(1.1, Math.min(1.6, 1.6 - (count > 6 ? (count - 6) * 0.025 : 0)));
+  const cardHeight = cardWidth * 1.33;
 
   // Chord distance between adjacent items at radius R is: 2 * R * sin(PI / N)
   // We want chord = cardWidth * 1.35 for pleasant spacing
@@ -138,8 +138,8 @@ export const PhotoCarouselScene: React.FC<{
   const calculatedRadius = minChord / (2 * sinAngle);
   const radius = Math.max(2.8, calculatedRadius);
 
-  // Camera is positioned at front edge of cylinder + fixed comfortable viewing distance
-  const cameraZ = radius + 2.5;
+  // Position camera with plenty of vertical breathing room so cards are NEVER cut off
+  const cameraZ = radius + 3.4;
 
   // Shared state refs for smooth drag and inertia
   const rotationRef = useRef(0);
@@ -194,14 +194,14 @@ export const PhotoCarouselScene: React.FC<{
 
   return (
     <div
-      className="w-full h-[470px] sm:h-[570px] relative select-none cursor-grab active:cursor-grabbing touch-none"
+      className="w-full h-[520px] sm:h-[620px] relative select-none cursor-grab active:cursor-grabbing touch-none py-2"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
       <Canvas
-        camera={{ position: [0, 0, cameraZ], fov: 46 }}
+        camera={{ position: [0, 0, cameraZ], fov: 42 }}
         dpr={[1, Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio : 1)]}
         gl={{ alpha: true, antialias: true }}
       >

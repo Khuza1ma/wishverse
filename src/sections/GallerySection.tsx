@@ -84,7 +84,7 @@ export const GallerySection: React.FC<GallerySectionProps> = ({
       </motion.div>
 
       {/* Gallery Canvas or 2D Slider */}
-      <div className="relative w-full overflow-hidden">
+      <div className="relative w-full">
         {viewMode === '3d' && hasWebGL && !prefersReducedMotion ? (
           <PhotoCarouselScene photos={photoUrls} onSelectPhoto={onOpenLightbox} />
         ) : (

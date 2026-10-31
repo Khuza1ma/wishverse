@@ -95,7 +95,7 @@ export const config: SiteConfig = {
   gallery: [
     {
       photo: "gallery-1.jpg",
-      caption: "Sunset at Big Sur — wind in your hair, pure happiness.",
+      caption: "Sunset at Big Sur wind in your hair, pure happiness.",
       location: "Big Sur, CA",
     },
     {
@@ -141,7 +141,7 @@ export const config: SiteConfig = {
   // Final Heartfelt Letter
   finalLetter: {
     salutation: "My Dearest Sophia,",
-    body: `Happy Birthday, my sweet love.\n\nFrom the very moment you entered my life, you turned the mundane into poetry and every small moment into a cherished memory. I love who you are, who you have been, and every version of who you will become.\n\nThank you for loving me with patience, laughing at my terrible jokes, and holding my hand through every storm. Today isn't just about celebrating your birthday — it's about celebrating the immense blessing of your existence in this world.\n\nMay this year bring you all the warmth, peace, deep laughter, and wild adventures you so richly deserve. I promise to be by your side cheering you on through every second of it.`,
+    body: `Happy Birthday, my sweet love.\n\nFrom the very moment you entered my life, you turned the mundane into poetry and every small moment into a cherished memory. I love who you are, who you have been, and every version of who you will become.\n\nThank you for loving me with patience, laughing at my terrible jokes, and holding my hand through every storm. Today isn't just about celebrating your birthday it's about celebrating the immense blessing of your existence in this world.\n\nMay this year bring you all the warmth, peace, deep laughter, and wild adventures you so richly deserve. I promise to be by your side cheering you on through every second of it.`,
     signOff: "Forever & Always Yours,\nAlex",
     closingPhoto: "closing-love.jpg",
   },

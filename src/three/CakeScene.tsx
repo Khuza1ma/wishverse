@@ -97,7 +97,8 @@ function CakeGroup({
   return (
     <group
       ref={groupRef}
-      position={[0, -0.4, 0]}
+      position={[0, -0.15, 0]}
+      scale={0.8}
       onClick={(e) => {
         e.stopPropagation();
         if (!isBlown) onBlowOut();
@@ -174,17 +175,17 @@ export const CakeScene: React.FC<CakeSceneProps> = ({
   primaryColor = '#e11d48',
 }) => {
   return (
-    <div className="w-full h-[380px] sm:h-[460px] relative select-none">
+    <div className="w-full h-[430px] sm:h-[510px] relative select-none py-2">
       <Canvas
-        camera={{ position: [0, 1.8, 3.8], fov: 42 }}
+        camera={{ position: [0, 1.25, 4.4], fov: 38 }}
         dpr={[1, Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio : 1)]}
         gl={{ alpha: true, antialias: true }}
       >
-        <ambientLight intensity={1.1} />
+        <ambientLight intensity={1.2} />
         <directionalLight position={[3, 5, 4]} intensity={1.5} color="#fff" />
         <pointLight position={[-3, -1, -2]} intensity={0.6} color="#fda4af" />
 
-        <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.3}>
+        <Float speed={1.1} rotationIntensity={0.06} floatIntensity={0.12}>
           <CakeGroup
             isBlown={isBlown}
             onBlowOut={onBlowOut}
@@ -195,13 +196,13 @@ export const CakeScene: React.FC<CakeSceneProps> = ({
         <OrbitControls
           enableZoom={false}
           enablePan={false}
-          maxPolarAngle={Math.PI / 2 + 0.1}
+          maxPolarAngle={Math.PI / 2 + 0.05}
           minPolarAngle={Math.PI / 4}
         />
       </Canvas>
 
       {!isBlown && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none text-xs text-rose-300/80 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-rose-500/20">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none text-xs text-rose-300/90 bg-black/50 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-rose-500/25 shadow-lg">
           Tap cake to blow out candles
         </div>
       )}

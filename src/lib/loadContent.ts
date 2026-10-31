@@ -92,7 +92,7 @@ if (activeConfig && activeConfig.gallery) {
   }
 
   // Filter gallery so only photos that actually exist are included!
-  // If e.g. photo 8 is missing from disk, it will NOT show an empty view — it skips it cleanly.
+  // If e.g. photo 8 is missing from disk, it will NOT show an empty view it skips it cleanly.
   activeConfig = {
     ...activeConfig,
     gallery: activeConfig.gallery.filter((item) => hasPhoto(item.photo)),

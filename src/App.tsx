@@ -111,8 +111,8 @@ export function App() {
     ...config.timeline.map((m) => ({
       url: getPhotoUrl(m.photo),
       caption: m.date
-        ? `${m.title} (${m.date})${m.text ? ` — ${m.text}` : ''}`
-        : `${m.title}${m.text ? ` — ${m.text}` : ''}`,
+        ? `${m.title} (${m.date})${m.text ? ` ${m.text}` : ''}`
+        : `${m.title}${m.text ? ` ${m.text}` : ''}`,
       location: m.badge,
     })),
   ];

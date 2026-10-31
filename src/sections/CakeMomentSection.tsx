@@ -92,7 +92,7 @@ export const CakeMomentSection: React.FC<CakeMomentSectionProps> = ({
   };
 
   return (
-    <section className="relative py-24 px-4 sm:px-6 max-w-4xl mx-auto text-center overflow-hidden">
+    <section className="relative py-24 px-4 sm:px-6 max-w-4xl mx-auto text-center">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
