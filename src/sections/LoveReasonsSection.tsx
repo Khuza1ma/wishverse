@@ -5,12 +5,14 @@ import { Heart, Sparkles, HelpCircle } from 'lucide-react';
 interface LoveReasonsSectionProps {
   reasons: string[];
   herName: string;
+  reasonsSubtitle?: string;
   primaryColor?: string;
 }
 
 export const LoveReasonsSection: React.FC<LoveReasonsSectionProps> = ({
   reasons,
   herName,
+  reasonsSubtitle,
   primaryColor = '#e11d48',
 }) => {
   const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
@@ -21,6 +23,8 @@ export const LoveReasonsSection: React.FC<LoveReasonsSectionProps> = ({
       [index]: !prev[index],
     }));
   };
+
+  const isGridOfThree = reasons.length % 3 === 0;
 
   return (
     <section className="relative py-24 px-4 sm:px-6 max-w-6xl mx-auto text-center">
@@ -39,13 +43,17 @@ export const LoveReasonsSection: React.FC<LoveReasonsSectionProps> = ({
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-white mb-3">
           Reasons Why I Love You
         </h2>
-        <p className="text-sm sm:text-base text-rose-200/80 max-w-md mx-auto">
-          Just a few of the million reasons why my heart chose you, {herName}. Tap any card to flip.
+        <p className="text-sm sm:text-base text-rose-200/90 max-w-xl mx-auto leading-relaxed">
+          {reasonsSubtitle || `Just a few of the million reasons why my heart chose you, ${herName}. Tap any card to flip.`}
         </p>
       </motion.div>
 
       {/* Flip Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 ${
+          isGridOfThree ? 'lg:grid-cols-3 max-w-5xl' : 'lg:grid-cols-4'
+        } gap-4 sm:gap-6 mx-auto`}
+      >
         {reasons.map((reason, index) => {
           const isFlipped = Boolean(flippedCards[index]);
 
@@ -94,7 +102,7 @@ export const LoveReasonsSection: React.FC<LoveReasonsSectionProps> = ({
                 >
                   <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-rose-500/20 blur-xl pointer-events-none" />
                   
-                  <p className="font-handwriting text-2xl sm:text-3xl text-rose-100 leading-snug">
+                  <p className="font-handwriting text-xl sm:text-2xl text-rose-100 leading-snug px-2">
                     "{reason}"
                   </p>
 

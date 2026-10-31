@@ -4,7 +4,7 @@ import { X, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 
 export interface LightboxPhoto {
   url: string;
-  caption: string;
+  caption?: string;
   location?: string;
 }
 
@@ -131,9 +131,11 @@ export const Lightbox: React.FC<LightboxProps> = ({
                   <span>{currentPhoto.location}</span>
                 </div>
               )}
-              <p className="text-sm sm:text-base text-rose-100 font-serif max-w-xl mx-auto">
-                {currentPhoto.caption}
-              </p>
+              {currentPhoto.caption && currentPhoto.caption.trim().length > 0 && (
+                <p className="text-sm sm:text-base text-rose-100 font-serif max-w-xl mx-auto">
+                  {currentPhoto.caption}
+                </p>
+              )}
               <span className="text-[11px] text-zinc-400 mt-2 block tracking-wider uppercase">
                 {currentIndex! + 1} of {photos.length}
               </span>

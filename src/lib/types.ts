@@ -1,14 +1,14 @@
 export interface Milestone {
-  date: string;
+  date?: string;
   title: string;
-  text: string;
+  text?: string;
   photo: string;
   badge?: string;
 }
 
 export interface GalleryItem {
   photo: string;
-  caption: string;
+  caption?: string;
   location?: string;
 }
 
@@ -47,6 +47,7 @@ export interface SiteConfig {
   togetherCounterLabel?: string;
   timeline: Milestone[];
   gallery: GalleryItem[];
+  reasonsSubtitle?: string;
   reasons: string[];
   finalLetter: string | FinalLetterConfig;
 }

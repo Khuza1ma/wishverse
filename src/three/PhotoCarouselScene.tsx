@@ -2,16 +2,29 @@ import React, { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Image } from '@react-three/drei';
 import * as THREE from 'three';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CarouselItemProps {
   url: string;
   index: number;
   total: number;
   radius: number;
+  cardWidth: number;
+  cardHeight: number;
+  hasMovedRef: React.MutableRefObject<boolean>;
   onSelect: (index: number) => void;
 }
 
-function CarouselItem({ url, index, total, radius, onSelect }: CarouselItemProps) {
+function CarouselItem({
+  url,
+  index,
+  total,
+  radius,
+  cardWidth,
+  cardHeight,
+  hasMovedRef,
+  onSelect,
+}: CarouselItemProps) {
   const meshRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -24,10 +37,7 @@ function CarouselItem({ url, index, total, radius, onSelect }: CarouselItemProps
       ref={meshRef}
       position={[x, 0, z]}
       rotation={[0, angle, 0]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(index);
-      }}
+      scale={hovered ? 1.07 : 1}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(true);
@@ -37,15 +47,20 @@ function CarouselItem({ url, index, total, radius, onSelect }: CarouselItemProps
         setHovered(false);
         if (typeof document !== 'undefined') document.body.style.cursor = 'auto';
       }}
-      scale={hovered ? 1.08 : 1}
     >
-      {/* 3D Photo Card */}
       <Image
         url={url}
-        scale={[1.8, 2.4]}
+        scale={[cardWidth, cardHeight]}
         radius={0.08}
         transparent
         toneMapped={false}
+        onClick={(e) => {
+          e.stopPropagation();
+          // Only trigger select if user was not actively dragging
+          if (!hasMovedRef.current) {
+            onSelect(index);
+          }
+        }}
       />
     </group>
   );
@@ -53,55 +68,51 @@ function CarouselItem({ url, index, total, radius, onSelect }: CarouselItemProps
 
 function CarouselRig({
   photos,
+  radius,
+  cardWidth,
+  cardHeight,
+  rotationRef,
+  velocityRef,
+  isDraggingRef,
+  hasMovedRef,
   onSelect,
 }: {
   photos: string[];
+  radius: number;
+  cardWidth: number;
+  cardHeight: number;
+  rotationRef: React.MutableRefObject<number>;
+  velocityRef: React.MutableRefObject<number>;
+  isDraggingRef: React.MutableRefObject<boolean>;
+  hasMovedRef: React.MutableRefObject<boolean>;
   onSelect: (index: number) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const isDragging = useRef(false);
-  const previousPointerX = useRef(0);
-  const angularVelocity = useRef(0.003); // gentle auto-rotation
 
   useFrame(() => {
     if (!groupRef.current) return;
 
-    if (!isDragging.current) {
-      // Smooth decay of velocity towards gentle idling
-      angularVelocity.current = THREE.MathUtils.lerp(angularVelocity.current, 0.002, 0.04);
-      groupRef.current.rotation.y += angularVelocity.current;
+    if (!isDraggingRef.current) {
+      // Gentle inertia decay towards slow ambient spin
+      velocityRef.current = THREE.MathUtils.lerp(velocityRef.current, 0.0015, 0.04);
+      rotationRef.current += velocityRef.current;
     }
+
+    groupRef.current.rotation.y = rotationRef.current;
   });
 
   return (
-    <group
-      ref={groupRef}
-      onPointerDown={(e) => {
-        isDragging.current = true;
-        previousPointerX.current = e.clientX;
-      }}
-      onPointerUp={() => {
-        isDragging.current = false;
-      }}
-      onPointerLeave={() => {
-        isDragging.current = false;
-      }}
-      onPointerMove={(e) => {
-        if (!isDragging.current || !groupRef.current) return;
-        const deltaX = e.clientX - previousPointerX.current;
-        previousPointerX.current = e.clientX;
-        const dragSpeed = 0.005;
-        groupRef.current.rotation.y += deltaX * dragSpeed;
-        angularVelocity.current = deltaX * dragSpeed * 0.8;
-      }}
-    >
+    <group ref={groupRef}>
       {photos.map((url, i) => (
         <CarouselItem
           key={i}
           url={url}
           index={i}
           total={photos.length}
-          radius={2.9}
+          radius={radius}
+          cardWidth={cardWidth}
+          cardHeight={cardHeight}
+          hasMovedRef={hasMovedRef}
           onSelect={onSelect}
         />
       ))}
@@ -113,23 +124,127 @@ export const PhotoCarouselScene: React.FC<{
   photos: string[];
   onSelectPhoto: (index: number) => void;
 }> = ({ photos, onSelectPhoto }) => {
+  const count = Math.max(photos.length, 1);
+
+  // Dynamic geometry for N photos:
+  // Card size smoothly adapts so whether there are 3 or 30 photos they look crisp
+  const cardWidth = Math.max(1.15, Math.min(1.75, 1.75 - (count > 6 ? (count - 6) * 0.03 : 0)));
+  const cardHeight = cardWidth * 1.35;
+
+  // Chord distance between adjacent items at radius R is: 2 * R * sin(PI / N)
+  // We want chord = cardWidth * 1.35 for pleasant spacing
+  const minChord = cardWidth * 1.35;
+  const sinAngle = Math.sin(Math.PI / Math.max(count, 3));
+  const calculatedRadius = minChord / (2 * sinAngle);
+  const radius = Math.max(2.8, calculatedRadius);
+
+  // Camera is positioned at front edge of cylinder + fixed comfortable viewing distance
+  const cameraZ = radius + 2.5;
+
+  // Shared state refs for smooth drag and inertia
+  const rotationRef = useRef(0);
+  const velocityRef = useRef(0.002);
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const startXRef = useRef(0);
+  const lastXRef = useRef(0);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.clientX;
+    lastXRef.current = e.clientX;
+    velocityRef.current = 0;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const currentX = e.clientX;
+    const deltaX = currentX - lastXRef.current;
+    lastXRef.current = currentX;
+
+    if (Math.abs(currentX - startXRef.current) > 5) {
+      hasMovedRef.current = true;
+    }
+
+    const sensitivity = 0.0055;
+    rotationRef.current += deltaX * sensitivity;
+    velocityRef.current = deltaX * sensitivity;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDraggingRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handleSpinLeft = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    velocityRef.current = 0.035;
+  };
+
+  const handleSpinRight = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    velocityRef.current = -0.035;
+  };
+
   return (
-    <div className="w-full h-[450px] sm:h-[550px] relative cursor-grab active:cursor-grabbing">
+    <div
+      className="w-full h-[470px] sm:h-[570px] relative select-none cursor-grab active:cursor-grabbing touch-none"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
       <Canvas
-        camera={{ position: [0, 0, 4.4], fov: 48 }}
+        camera={{ position: [0, 0, cameraZ], fov: 46 }}
         dpr={[1, Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio : 1)]}
         gl={{ alpha: true, antialias: true }}
       >
-        <ambientLight intensity={1.2} />
-        <directionalLight position={[0, 4, 4]} intensity={1.5} color="#fff" />
-        <pointLight position={[0, -2, 2]} intensity={1} color="#fda4af" />
+        <ambientLight intensity={1.3} />
+        <directionalLight position={[0, 5, 5]} intensity={1.5} color="#fff" />
+        <pointLight position={[0, -2, 3]} intensity={1} color="#fda4af" />
 
-        <CarouselRig photos={photos} onSelect={onSelectPhoto} />
+        <CarouselRig
+          photos={photos}
+          radius={radius}
+          cardWidth={cardWidth}
+          cardHeight={cardHeight}
+          rotationRef={rotationRef}
+          velocityRef={velocityRef}
+          isDraggingRef={isDraggingRef}
+          hasMovedRef={hasMovedRef}
+          onSelect={onSelectPhoto}
+        />
       </Canvas>
 
-      {/* Helpful Hint */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none select-none text-xs text-rose-300/80 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-rose-500/20">
-        Drag to spin &bull; Tap photo to view
+      {/* Interactive Controls & Hints */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 select-none z-10">
+        <button
+          onClick={handleSpinLeft}
+          className="p-2 rounded-full glass-panel hover:bg-rose-500/20 text-rose-200 transition-all border border-rose-500/20 active:scale-95 shadow-lg"
+          aria-label="Spin carousel left"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        <div className="pointer-events-none text-xs text-rose-200/90 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-rose-500/25 shadow-lg flex items-center gap-1.5 whitespace-nowrap">
+          <span>Drag to spin</span>
+          <span className="text-rose-400 font-semibold">({photos.length} photos)</span>
+          <span>&bull; Tap to view</span>
+        </div>
+
+        <button
+          onClick={handleSpinRight}
+          className="p-2 rounded-full glass-panel hover:bg-rose-500/20 text-rose-200 transition-all border border-rose-500/20 active:scale-95 shadow-lg"
+          aria-label="Spin carousel right"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

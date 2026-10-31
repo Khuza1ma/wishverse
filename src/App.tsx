@@ -105,12 +105,14 @@ export function App() {
   const allLightboxPhotos: LightboxPhoto[] = [
     ...config.gallery.map((g) => ({
       url: getPhotoUrl(g.photo),
-      caption: g.caption,
+      caption: g.caption || '',
       location: g.location,
     })),
     ...config.timeline.map((m) => ({
       url: getPhotoUrl(m.photo),
-      caption: `${m.title} — ${m.date}: ${m.text}`,
+      caption: m.date
+        ? `${m.title} (${m.date})${m.text ? ` — ${m.text}` : ''}`
+        : `${m.title}${m.text ? ` — ${m.text}` : ''}`,
       location: m.badge,
     })),
   ];
@@ -216,6 +218,7 @@ export function App() {
               <LoveReasonsSection
                 reasons={config.reasons}
                 herName={config.herName}
+                reasonsSubtitle={config.reasonsSubtitle}
                 primaryColor={config.theme.primary}
               />
             )}

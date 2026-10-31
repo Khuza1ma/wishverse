@@ -32,6 +32,73 @@ const examplePhotos = import.meta.glob<string>(
   { eager: true, query: '?url', import: 'default' }
 );
 
+// Check whether a photo file actually exists in content/photos/ or content-example/photos/
+export function hasPhoto(filename?: string): boolean {
+  if (!filename) return false;
+  if (filename.startsWith('http://') || filename.startsWith('https://') || filename.startsWith('data:')) {
+    return true;
+  }
+  const cleanName = filename.split('/').pop() || filename;
+  for (const path in realPhotos) {
+    if (path.endsWith(`/${cleanName}`) || path.endsWith(`/${cleanName.replace(/\.[^.]+$/, '.webp')}`)) {
+      return true;
+    }
+  }
+  for (const path in examplePhotos) {
+    if (path.endsWith(`/${cleanName}`) || path.endsWith(`/${cleanName.replace(/\.[^.]+$/, '.webp')}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Auto-discover any extra gallery photos from disk up to N index if not already in config.gallery
+if (activeConfig && activeConfig.gallery) {
+  const sourcePhotos = isUsingRealContent ? realPhotos : examplePhotos;
+  const existingGalleryBases = new Set(
+    activeConfig.gallery.map((g) => g.photo.replace(/\.(webp|jpg|jpeg|png|svg|gif)$/i, '').toLowerCase())
+  );
+
+  const foundGalleryFiles = new Map<string, string>();
+  for (const path in sourcePhotos) {
+    const filename = path.split('/').pop();
+    if (filename && filename.toLowerCase().startsWith('gallery-')) {
+      const base = filename.replace(/\.(webp|jpg|jpeg|png|svg|gif)$/i, '').toLowerCase();
+      if (!existingGalleryBases.has(base) && !foundGalleryFiles.has(base)) {
+        foundGalleryFiles.set(base, filename);
+      }
+    }
+  }
+
+  if (foundGalleryFiles.size > 0) {
+    const sortedBases = Array.from(foundGalleryFiles.keys()).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    });
+
+    const autoItems = sortedBases.map((base) => {
+      const originalFile = foundGalleryFiles.get(base)!;
+      return {
+        photo: originalFile,
+        caption: '',
+      };
+    });
+
+    activeConfig = {
+      ...activeConfig,
+      gallery: [...activeConfig.gallery, ...autoItems],
+    };
+  }
+
+  // Filter gallery so only photos that actually exist are included!
+  // If e.g. photo 8 is missing from disk, it will NOT show an empty view — it skips it cleanly.
+  activeConfig = {
+    ...activeConfig,
+    gallery: activeConfig.gallery.filter((item) => hasPhoto(item.photo)),
+  };
+}
+
 // Helper to look up a photo URL by its filename
 export function getPhotoUrl(filename: string): string {
   if (!filename) return createPlaceholderPhoto('No Photo');

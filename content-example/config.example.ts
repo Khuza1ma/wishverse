@@ -126,6 +126,7 @@ export const config: SiteConfig = {
   ],
 
   // Flip cards / Floating notes of affection
+  reasonsSubtitle: "Just a few of the million reasons why my heart chose you. Tap any card to flip.",
   reasons: [
     "The way your eyes crinkle into happy half-moons when you truly laugh.",
     "How you always remember how everyone takes their morning tea or coffee.",

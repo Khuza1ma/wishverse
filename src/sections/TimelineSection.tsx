@@ -80,7 +80,14 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({
                 {/* Milestone Photo Card */}
                 <div className="w-full md:w-1/2">
                   <div
-                    onClick={() => onSelectPhoto(photoUrl, `${milestone.title} - ${milestone.date}`)}
+                    onClick={() =>
+                      onSelectPhoto(
+                        photoUrl,
+                        milestone.date && milestone.date.trim().length > 0
+                          ? `${milestone.title} - ${milestone.date}`
+                          : milestone.title
+                      )
+                    }
                     className="group relative cursor-pointer overflow-hidden rounded-3xl glass-panel border border-rose-500/20 shadow-xl transition-all duration-300 hover:border-rose-400 hover:scale-[1.02]"
                   >
                     <div className="aspect-[16/10] sm:aspect-[16/11] overflow-hidden bg-rose-950/30">
@@ -106,21 +113,25 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({
                     isEven ? 'md:pl-4 text-left' : 'md:pr-4 text-left'
                   }`}
                 >
-                  {/* Badge & Date */}
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    {milestone.badge && (
-                      <span
-                        className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-white shadow-sm"
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        {milestone.badge}
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1.5 text-xs text-rose-300 font-medium">
-                      <Calendar className="w-3.5 h-3.5 text-rose-400" />
-                      {milestone.date}
-                    </span>
-                  </div>
+                  {/* Badge & Optional Date */}
+                  {(milestone.badge || (milestone.date && milestone.date.trim().length > 0)) && (
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {milestone.badge && (
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-white shadow-sm"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          {milestone.badge}
+                        </span>
+                      )}
+                      {milestone.date && milestone.date.trim().length > 0 && (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-rose-300 font-medium">
+                          <Calendar className="w-3.5 h-3.5 text-rose-400" />
+                          {milestone.date}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Title */}
                   <h3 className="text-2xl sm:text-3xl font-serif font-bold text-white mb-2 leading-snug">
@@ -128,9 +139,11 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({
                   </h3>
 
                   {/* Text */}
-                  <p className="text-sm sm:text-base text-rose-100/80 leading-relaxed font-light">
-                    {milestone.text}
-                  </p>
+                  {milestone.text && (
+                    <p className="text-sm sm:text-base text-rose-100/80 leading-relaxed font-light">
+                      {milestone.text}
+                    </p>
+                  )}
                 </div>
               </motion.div>
             );

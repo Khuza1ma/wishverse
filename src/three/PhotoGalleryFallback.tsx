@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PhotoGalleryFallbackProps {
-  photos: { url: string; caption: string; location?: string }[];
+  photos: { url: string; caption?: string; location?: string }[];
   onSelectPhoto: (index: number) => void;
 }
 
@@ -54,7 +54,7 @@ export const PhotoGalleryFallback: React.FC<PhotoGalleryFallbackProps> = ({
               <div className="aspect-[4/5] overflow-hidden bg-rose-950/40 relative">
                 <img
                   src={item.url}
-                  alt={item.caption}
+                  alt={item.caption || 'Couple memory'}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
@@ -62,16 +62,20 @@ export const PhotoGalleryFallback: React.FC<PhotoGalleryFallbackProps> = ({
                   <span className="text-xs text-rose-200 font-medium">Tap to enlarge</span>
                 </div>
               </div>
-              <div className="p-3 bg-zinc-950/80">
-                {item.location && (
-                  <span className="text-[11px] text-rose-400 font-medium block truncate">
-                    {item.location}
-                  </span>
-                )}
-                <p className="text-xs text-rose-100/90 truncate font-serif mt-0.5">
-                  {item.caption}
-                </p>
-              </div>
+              {((item.caption && item.caption.trim().length > 0) || (item.location && item.location.trim().length > 0)) && (
+                <div className="p-3 bg-zinc-950/80">
+                  {item.location && item.location.trim().length > 0 && (
+                    <span className="text-[11px] text-rose-400 font-medium block truncate">
+                      {item.location}
+                    </span>
+                  )}
+                  {item.caption && item.caption.trim().length > 0 && (
+                    <p className="text-xs text-rose-100/90 truncate font-serif mt-0.5">
+                      {item.caption}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
